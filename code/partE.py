@@ -177,6 +177,8 @@ def run_partE(fruit, epochs=10, batch_size=4, lr=1e-4):
             f"Loss: {train_loss/len(train_loader):.4f} "
             f"PixelAcc: {acc_total/len(val_loader):.4f}"
         )
+    torch.save(model.state_dict(), "unet_partE.pth")
+    print("Model saved to unet_partE.pth")
 
     # =========================
     # Test Script

@@ -167,7 +167,7 @@ if __name__ == "__main__":
                os.path.join("Project Data", "Fruit","Validation","Banana","Images","76.jpg")
                ]
     # partA_testResult = partA_test_script(imgPaths[0])
-    if(  'Fruit' == 'Fruit' ):
+    if(  'FruitX' == 'Fruit' ):
         # partA_testResult['classification'] 
         #here should do partC
 
@@ -182,27 +182,27 @@ if __name__ == "__main__":
         #     result = partC_test(img)
         #     print(result)
 
-        # print("in Masks PartD")
+        print("in Masks PartD")
         
-        # seg_model, partD_test = partD.run_partD(
-        #     fruit,
-        #     epochs=5,
-        #     batch_size=4
-        # )
-
-        # mask = partD_test(imgPaths[5], "output_mask_partD.png")
-
-
-        print("in Masks PartE")
-
-
-        #run ppartE
-        modelPartE , testPartE = partE.run_partE(fruit,epochs= 5, batch_size= 2)
-        gray_mask, color_mask = testPartE(
-            imgPaths[5],
-            "mask_gray_partE.png",
-            "mask_color_partE.png"
+        seg_model, partD_test = partD.run_partD(
+            fruit,
+            epochs=5,
+            batch_size=4
         )
+
+        mask = partD_test(imgPaths[5], "output_mask_partD.png")
+
+
+        # print("in Masks PartE")
+
+
+        # #run ppartE
+        # modelPartE , testPartE = partE.run_partE(fruit,epochs= 1, batch_size= 2)
+        # gray_mask, color_mask = testPartE(
+        #     imgPaths[5],
+        #     "mask_gray_partE.png",
+        #     "mask_color_partE.png"
+        # )
 
     else:
         # #here should do partB

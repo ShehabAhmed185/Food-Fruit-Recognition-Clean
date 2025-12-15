@@ -143,6 +143,9 @@ def run_partD(fruit, epochs=10, batch_size=4, lr=1e-4):
                 dice_total += dice_score(out, masks).item()
 
         print(f"Epoch [{epoch+1}/{epochs}] Loss: {train_loss/len(train_loader):.4f} Dice: {dice_total/len(val_loader):.4f}")
+    # Save weights only
+    torch.save(model.state_dict(), "unet_partD.pth")
+    print("Part D model saved to unet_partD.pth")
 
     # =========================
     # Test Script
