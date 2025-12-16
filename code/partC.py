@@ -194,7 +194,7 @@ def run_partC(fruit, epochs=10, batch_size=8):
                 "model": model.state_dict(),
                 "label2id": label2id,
                 "id2label": id2label
-            }, "best_partC.pth")
+            }, "partC_classification_model.pth")
 
             print("Saved best model!")
 

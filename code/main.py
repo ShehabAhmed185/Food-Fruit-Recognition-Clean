@@ -175,22 +175,22 @@ if __name__ == "__main__":
         # print(f"  Confidence: {partA_testResult['confidence']:.3f}")
         # print(f"  Food Probability: {partA_testResult['probability_food']:.3f}")
         # print(f"  Fruit Probability: {partA_testResult['probability_fruit']:.3f}")
-        # partC_model, partC_test = partC.run_partC(fruit, epochs=10, batch_size=8)
-        # # Test example
+        partC_model, partC_test = partC.run_partC(fruit, epochs=1, batch_size=8)
+        # Test example
         # for i in range(4):
-        #     img = readTestData(imgPaths[i])
-        #     result = partC_test(img)
-        #     print(result)
+        img = readTestData(imgPaths[5])
+        result = partC_test(img)
+        print(result)
 
-        print("in Masks PartD")
+        # print("in Masks PartD")
         
-        seg_model, partD_test = partD.run_partD(
-            fruit,
-            epochs=5,
-            batch_size=4
-        )
+        # seg_model, partD_test = partD.run_partD(
+        #     fruit,
+        #     epochs=5,
+        #     batch_size=4
+        # )
 
-        mask = partD_test(imgPaths[5], "output_mask_partD.png")
+        # mask = partD_test(imgPaths[5], "output_mask_partD.png")
 
 
         # print("in Masks PartE")
@@ -208,15 +208,9 @@ if __name__ == "__main__":
         # #here should do partB
         print("it's Food")
         # food_BGR =convert_rgb_to_bgr(food)
-        siamese_model, partB_test_script = partB.run_partB(food, epochs=1, batch_size=2)
+        siamese_model = partB.run_partB(food, epochs=1, batch_size=2)
         
-        food_result = siamese_model.predict_food_type(imgPaths[0])
-        print(f"\nFood Recognition Result:")
-        print(f"  Food Type: {food_result['category']}")
-        print(f"  Confidence: {food_result['confidence']:.3f}")
-        print(f"  Calories per gram: {food_result['calories_per_gram']:.2f}")
-
-
+        
         # print("\nTop 5 Predictions:")
         # for i, pred in enumerate(food_result['all_predictions'][:5], 1):
         #     print(f"  {i}. {pred['category']}: {pred['confidence']:.3f} (distance: {pred['distance']:.3f})")

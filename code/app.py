@@ -9,9 +9,7 @@ from partA import PartAModel
 from partD import UNet as BinaryUNet
 from partE import UNet as MultiUNet
 from partB import SiameseNetwork
-
-
-
+from partC import build_model # <--- 1. NEW IMPORT
 
 # =============================
 # Device
@@ -26,6 +24,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PARTA_PATH = os.path.join(BASE_DIR, "partA_food_fruit_classifier.pth")
 PARTD_PATH = os.path.join(BASE_DIR, "unet_partD.pth")
 PARTE_PATH = os.path.join(BASE_DIR, "unet_partE.pth")
+PARTC_PATH = os.path.join(BASE_DIR, "partC_classification_model.pth") # <--- 2. NEW PATH
 
 # =============================
 # Load Models
@@ -35,11 +34,6 @@ partA.load_state_dict(torch.load(PARTA_PATH, map_location=device))
 partA.eval()
 
 
-modelB = SiameseNetwork()
-modelB.load_model("partB_siamese_model")
-
-
-
 partD = BinaryUNet().to(device)
 partD.load_state_dict(torch.load(PARTD_PATH, map_location=device))
 partD.eval()
@@ -47,6 +41,14 @@ partD.eval()
 partE = MultiUNet(num_classes=31).to(device)
 partE.load_state_dict(torch.load(PARTE_PATH, map_location=device))
 partE.eval()
+
+# Load Part C Model (Fruit Classification) # <--- 3. NEW LOAD LOGIC
+checkpoint_C = torch.load(PARTC_PATH, map_location=device)
+num_classes_C = len(checkpoint_C['id2label'])
+partC = build_model(num_classes=num_classes_C).to(device)
+partC.load_state_dict(checkpoint_C['model'])
+partC.eval()
+partC_id2label = checkpoint_C['id2label'] # Store the label map globally
 
 print(" All models loaded successfully")
 
@@ -80,14 +82,41 @@ def run_partA(image_path):
 
     return label, confidence
 
-
 # =============================
-# Part B – Classification
+# Part C – Fruit Classification # <--- 4. NEW FUNCTION
 # =============================
-def run_partB(image_path):
-    result = modelB.predict_food_type(image_path)
-    return result
+def run_partC(image_path):
+    # Load and preprocess image specifically for the MobileNetV3 model (Part C)
+    img_bgr = cv2.imread(image_path)
+    if img_bgr is None:
+        raise ValueError(f"Invalid image path: {image_path}")
+    
+    img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    
+    # Resize to 224x224 (as done in partC.py)
+    img = cv2.resize(img, (224, 224))
+    
+    # Normalization (Matching partC.py's test_script)
+    img = img.astype(np.float32) / 255.0
+    mean = np.array([0.485,0.456,0.406])
+    std  = np.array([0.229,0.224,0.225])
+    img = (img - mean) / std
+    img = np.transpose(img, (2,0,1))
 
+    # Convert to tensor and move to device
+    img_tensor = torch.tensor(img, dtype=torch.float32).unsqueeze(0).to(device)
+
+    # Inference
+    partC.eval()
+    with torch.no_grad():
+        out = partC(img_tensor)
+        prob = torch.softmax(out, dim=1)
+        cid = int(out.argmax(1))
+        conf = float(prob[0][cid])
+        
+    category = partC_id2label[cid]
+
+    return category, conf
 
 
 # =============================
@@ -131,16 +160,6 @@ def run_partE(image_path,
     return gray_path, color_path
 
 
-
-def extract_weight_from_filename(filename):
-    match = re.search(r'_(\d+)g', filename)
-    if match:
-        return int(match.group(1))
-    return None
-
-
-
-
 # =============================
 # FULL PIPELINE
 # =============================
@@ -156,7 +175,13 @@ def run_pipeline(image_path):
     }
 
     if label == "Fruit":
-        print("Running Part D & Part E...")
+        print("Running Part C, D & Part E...") # Adjusted print
+        
+        # New: Run Part C - Fruit Classification
+        fruit_type, fruit_conf = run_partC(image_path)
+        print(f"Part C  Fruit Type: {fruit_type} ({fruit_conf:.2f})")
+        results["fruit_type"] = fruit_type
+        results["fruit_type_confidence"] = fruit_conf
 
         results["binary_mask"] = run_partD(image_path)
         gray, color = run_partE(image_path)
@@ -166,22 +191,10 @@ def run_pipeline(image_path):
         print(" Segmentation completed")
 
     else:
-        food_result = run_partB(image_path)
-        food_type = food_result['category']
-        cal_per_g = food_result['calories_per_gram']
-        weight = extract_weight_from_filename(image_path)
-
-        total_calories = weight * cal_per_g
-
-        results["food_type"] = food_type
-        results["calories_per_gram"] = cal_per_g
-        results["weight_g"] = weight
-        results["total_calories"] = total_calories
-
-        print("Food detected => segmentation skipped")
+        # NOTE: You would integrate Part B logic here
+        print("Food detected => segmentation skipped (Part B integration required for full pipeline)")
 
     return results
-
 
 
 def choose_image():
@@ -196,22 +209,11 @@ def choose_image():
     return file_path
 
 
-
-
 # =============================
 # Test
 # =============================
 if __name__ == "__main__":
     test_image = choose_image()
-    output = run_pipeline(test_image)
-    print("\nFinal Output:", output)
-
-
-
-
-
-
-
-
-
-
+    if test_image:
+        output = run_pipeline(test_image)
+        print("\nFinal Output:", output)
