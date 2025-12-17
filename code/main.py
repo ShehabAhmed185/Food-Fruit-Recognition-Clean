@@ -207,8 +207,8 @@ if __name__ == "__main__":
     else:
         # #here should do partB
         print("it's Food")
-        # food_BGR =convert_rgb_to_bgr(food)
-        siamese_model = partB.run_partB(food, epochs=30, batch_size=16)
+        food_BGR =convert_rgb_to_bgr(food)
+        siamese_model = partB.run_partB(food_BGR, epochs=30, batch_size=16)
         
         
         # print("\nTop 5 Predictions:")

@@ -131,7 +131,7 @@ def load_dataset(root_path):
                 fruit_val_masks.append(mask_path)
                 fruit_val_labels.append(cat)
 
-    fruit_calories = load_calories(os.path.join(root_path, "Fruit", "calories.txt"))
+    fruit_calories = load_calories(os.path.join(root_path, "Fruit", "Calories.txt"))
     fruit_calories_normalized = {normalize_label(k): v for k, v in fruit_calories.items()}
 
     # Return Everything
