@@ -15,6 +15,9 @@ import random
 import pickle
 import matplotlib.pyplot as plt
 import warnings
+import csv
+import time
+
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -114,6 +117,24 @@ def distance_accuracy(th=0.5):
     return acc_fn
 
 
+def init_partB_logger():
+    os.makedirs("partB_logs", exist_ok=True)
+    log_path = "partB_logs/training_log.csv"
+
+    if not os.path.exists(log_path):
+        with open(log_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "epoch",
+                "train_loss",
+                "train_accuracy",
+                "val_loss",
+                "val_accuracy",
+                "epoch_time_sec"
+            ])
+    return log_path
+
+
 # =========================================================
 # Utilities
 # =========================================================
@@ -145,7 +166,7 @@ def preprocess(images):
 def train_partB(food_data, epochs=10, batch_size=16):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
-
+    log_path = init_partB_logger()
     X = preprocess(np.array(food_data['train_images']))
     y = np.array(food_data['train_labels'])
 
@@ -162,6 +183,7 @@ def train_partB(food_data, epochs=10, batch_size=16):
     acc_fn = distance_accuracy()
 
     for e in range(epochs):
+        start_time = time.time()
         model.train()
         tl, ta = 0, 0
         for a, b, yb in train_loader:
@@ -187,7 +209,36 @@ def train_partB(food_data, epochs=10, batch_size=16):
               f"Loss {tl/len(train_loader):.4f} Acc {ta/len(train_loader):.4f} | "
               f"ValLoss {vl/len(val_loader):.4f} ValAcc {va/len(val_loader):.4f}")
 
-        return model
+
+
+        epoch_time = time.time() - start_time
+
+        train_loss = tl / len(train_loader)
+        train_acc  = ta / len(train_loader)
+        val_loss   = vl / len(val_loader)
+        val_acc    = va / len(val_loader)
+
+        print(
+            f"Epoch {e+1}/{epochs} | "
+            f"Loss {train_loss:.4f} Acc {train_acc:.4f} | "
+            f"ValLoss {val_loss:.4f} ValAcc {val_acc:.4f}"
+        )
+
+        with open(log_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                e + 1,
+                round(train_loss, 6),
+                round(train_acc, 6),
+                round(val_loss, 6),
+                round(val_acc, 6),
+                round(epoch_time, 2)
+        ])
+
+
+
+
+    return model
 
 # =========================================================
 # Reference Embeddings & Prediction
@@ -256,12 +307,13 @@ def save_partB(model, path='partB'):
         pickle.dump(model.reference_embeddings, f)
 
 
-def load_partB(path='partB'):
-    model = SiameseNetwork()
-    model.load_state_dict(torch.load(path + '_model.pth', map_location='cpu'))
+def load_partB(path='partB', device='cpu'):
+    model = SiameseNetwork().to(device)
+    model.load_state_dict(torch.load(path + '_model.pth', map_location=device))
     with open(path + '_refs.pkl', 'rb') as f:
         model.reference_embeddings = pickle.load(f)
     return model
+
 
 
 # =========================================================
@@ -269,7 +321,7 @@ def load_partB(path='partB'):
 # =========================================================
 def run_partB(food_data, epochs=10, batch_size=16):
     print('='*60)
-    print('PART B – Siamese Network Food Recognition')
+    print('PART B - Siamese Network Food Recognition')
     print('='*60)
     model = train_partB(food_data, epochs, batch_size)
     build_reference_embeddings(model, food_data, batch_size=4)

@@ -37,7 +37,7 @@ PARTD_PATH = os.path.join(BASE_DIR, "unet_partD.pth")
 PARTE_PATH = os.path.join(BASE_DIR, "unet_partE.pth")
 
 UNSEEN_DIR = os.path.join(BASE_DIR, "unseen")  # folder with unseen food images
-USE_UNSEEN_MODE = True  # set True only during unseen-food testing
+USE_UNSEEN_MODE = False  # set True only during unseen-food testing
 
 # =============================
 # Load Models
@@ -47,7 +47,7 @@ partA.load_state_dict(torch.load(PARTA_PATH, map_location=device))
 partA.eval()
 
 partB = load_partB(PARTB_PREFIX)
-partB = partB.to(device)
+partB = load_partB(PARTB_PREFIX, device=device)
 partB.eval()
 
 checkpoint_C = torch.load(PARTC_PATH, map_location=device)
