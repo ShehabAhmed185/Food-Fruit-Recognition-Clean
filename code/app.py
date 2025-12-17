@@ -252,7 +252,7 @@ if __name__ == "__main__":
     print("If Need (Classification) press 1")
     print("If Need (Siamese Recognition) press 2")
 
-    choice = "2"#input("Enter your choice: ")
+    choice = "1"#input("Enter your choice: ")
 
     if choice == "1":
         print("Running Part Case I...")

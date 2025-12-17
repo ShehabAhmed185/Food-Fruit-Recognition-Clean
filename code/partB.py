@@ -377,17 +377,26 @@ def predict_image(model, image_path, threshold=0.5):
 # =========================================================
 def save_partB(model, path='partB'):
     torch.save(model.state_dict(), path + '_model.pth')
-    with open(path + '_refs.pkl', 'wb') as f:
-        pickle.dump(model.reference_embeddings, f)
+
+    refs = {
+        k: [torch.tensor(v) for v in vals]
+        for k, vals in model.reference_embeddings.items()
+    }
+
+    torch.save(refs, path + '_refs.pt')
 
 
 def load_partB(path='partB', device='cpu'):
     model = SiameseNetwork().to(device)
     model.load_state_dict(torch.load(path + '_model.pth', map_location=device))
-    with open(path + '_refs.pkl', 'rb') as f:
-        model.reference_embeddings = pickle.load(f)
-    return model
 
+    refs = torch.load(path + '_refs.pt', map_location=device)
+    model.reference_embeddings = {
+        k: [v.cpu().numpy() for v in vals]
+        for k, vals in refs.items()
+    }
+
+    return model
 
 
 # =========================================================
