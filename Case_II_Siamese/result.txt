@@ -1,0 +1,5 @@
+Siamese Network - Case II Result
+--------------------------------
+Anchor image: Anchor.jpg
+Most similar image: Potato_late_blight.JPG
+Distance: 0.0683

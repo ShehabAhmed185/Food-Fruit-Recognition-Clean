@@ -182,27 +182,68 @@ def run_integrated_test(input_dir="Integerated Test", output_dir="Case_I_Output"
 # Siamese Case II Test
 # =============================
 def run_siamese_case(anchor_path, reference_dir="Siamese Case II Test"):
+    partB.eval()
+
+    # =========================
+    # Create output folder
+    # =========================
+    output_dir = "Case_II_Siamese"
+    os.makedirs(output_dir, exist_ok=True)
+
+    output_file = os.path.join(output_dir, "result.txt")
+
+    anchor_path = os.path.abspath(anchor_path)
+
     def get_emb(path):
         img = cv2.imread(path)
+        if img is None:
+            return None
+
         img = cv2.resize(img, (224, 224))
         img = img.astype(np.float32) / 255.0
         img = np.transpose(img, (2, 0, 1))
         x = torch.tensor(img).unsqueeze(0).to(device)
+
         with torch.no_grad():
             return partB.forward_one(x).cpu().numpy()[0]
 
     anchor_emb = get_emb(anchor_path)
-    best_img, best_dist = None, 1e9
+
+    best_img = None
+    best_dist = float("inf")
 
     for ref in os.listdir(reference_dir):
-        ref_path = os.path.join(reference_dir, ref)
+        ref_path = os.path.abspath(os.path.join(reference_dir, ref))
+
+        # Exclude any image whose name starts with "Anchor"
+        if ref[:6].lower() == "anchor" or ref[:6].lower() == "Anchor":
+            continue
+
+
         if not ref.lower().endswith((".jpg", ".png", ".jpeg")):
             continue
-        dist = np.linalg.norm(anchor_emb - get_emb(ref_path))
-        if dist < best_dist:
-            best_dist, best_img = dist, ref
 
-    print("Most similar image:", best_img)
+        ref_emb = get_emb(ref_path)
+        if ref_emb is None:
+            continue
+
+        dist = np.linalg.norm(anchor_emb - ref_emb)
+
+        if dist < best_dist:
+            best_dist = dist
+            best_img = ref
+
+    # =========================
+    # Save output to TXT
+    # =========================
+    with open(output_file, "w") as f:
+        f.write("Siamese Network - Case II Result\n")
+        f.write("--------------------------------\n")
+        f.write(f"Anchor image: {os.path.basename(anchor_path)}\n")
+        f.write(f"Most similar image: {best_img}\n")
+        f.write(f"Distance: {best_dist:.4f}\n")
+
+    print("Result saved in:", output_file)
 
 # =============================
 # Main (example usage)
@@ -211,7 +252,7 @@ if __name__ == "__main__":
     print("If Need (Classification) press 1")
     print("If Need (Siamese Recognition) press 2")
 
-    choice = input("Enter your choice: ")
+    choice = "2"#input("Enter your choice: ")
 
     if choice == "1":
         print("Running Part Case I...")
@@ -220,7 +261,7 @@ if __name__ == "__main__":
         
     elif choice == "2":
         print("Running Case II (Siamese Network)...")
-        run_siamese_case(" ")
+        run_siamese_case("Siamese Case II Test/Anchor.jpg")
         print("Case II Finished and Results Saved Successfully")
 
     else:
