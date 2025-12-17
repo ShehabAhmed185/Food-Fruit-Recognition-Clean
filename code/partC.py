@@ -15,6 +15,9 @@ import cv2
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
+import os
+import csv
+import time
 
 
 # ===========================================================
@@ -54,6 +57,25 @@ class FruitDataset(Dataset):
         img = np.transpose(img, (2,0,1))
 
         return torch.tensor(img, dtype=torch.float32), label
+
+
+def init_partC_logger():
+    os.makedirs("partC_logs", exist_ok=True)
+    log_path = "partC_logs/training_log.csv"
+
+    if not os.path.exists(log_path):
+        with open(log_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "epoch",
+                "train_loss",
+                "train_accuracy",
+                "val_loss",
+                "val_accuracy",
+                "epoch_time_sec"
+            ])
+    return log_path
+
 
 
 # ===========================================================
@@ -175,18 +197,39 @@ def run_partC(fruit, epochs=10, batch_size=8):
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
     best_acc = 0
+    log_path = init_partC_logger()
 
     # --------------------------------------------------------
     # Training loop
     # --------------------------------------------------------
     for epoch in range(1, epochs+1):
+        start_time = time.time()
+
         print(f"\nEpoch {epoch}/{epochs}")
 
-        train_loss, train_acc = train_one_epoch(model, train_loader, loss_fn, optimizer, device)
-        val_loss, val_acc     = validate(model, val_loader, loss_fn, device)
+        train_loss, train_acc = train_one_epoch(
+            model, train_loader, loss_fn, optimizer, device
+        )
+        val_loss, val_acc = validate(
+            model, val_loader, loss_fn, device
+        )
+
+        epoch_time = time.time() - start_time
 
         print(f"Train => Loss: {train_loss:.4f} | Acc: {train_acc:.4f}")
         print(f"Val   => Loss: {val_loss:.4f} | Acc: {val_acc:.4f}")
+
+        # ✅ CSV LOGGING (NEW)
+        with open(log_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                epoch,
+                round(train_loss, 6),
+                round(train_acc, 6),
+                round(val_loss, 6),
+                round(val_acc, 6),
+                round(epoch_time, 2)
+            ])
 
         if val_acc > best_acc:
             best_acc = val_acc
@@ -197,6 +240,8 @@ def run_partC(fruit, epochs=10, batch_size=8):
             }, "partC_classification_model.pth")
 
             print("Saved best model!")
+
+
 
     print("\nTraining Finished!")
     print("Best Val Accuracy =", best_acc)

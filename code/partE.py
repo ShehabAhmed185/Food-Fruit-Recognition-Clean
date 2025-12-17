@@ -7,6 +7,9 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
+import os
+import csv
+import time
 
 # =========================
 # Dataset
@@ -58,6 +61,24 @@ class DoubleConv(nn.Module):
         return self.seq(x)
 
 
+def init_partE_logger():
+    os.makedirs("partE_logs", exist_ok=True)
+    log_path = "partE_logs/training_log.csv"
+
+    if not os.path.exists(log_path):
+        with open(log_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "epoch",
+                "train_loss",
+                "val_pixel_accuracy",
+                "epoch_time_sec"
+            ])
+    return log_path
+
+
+
+
 class UNet(nn.Module):
     def __init__(self, num_classes=31):
         super().__init__()
@@ -107,6 +128,8 @@ def pixel_accuracy(pred, target):
 # Main Runner
 # =========================
 
+
+
 def run_partE(fruit, epochs=10, batch_size=4, lr=1e-4):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -144,11 +167,12 @@ def run_partE(fruit, epochs=10, batch_size=4, lr=1e-4):
     model = UNet(num_classes=31).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
+    log_path = init_partE_logger()
     # =========================
     # Training
-    # =========================
     for epoch in range(epochs):
+        start_time = time.time()
+
         model.train()
         train_loss = 0
 
@@ -164,6 +188,8 @@ def run_partE(fruit, epochs=10, batch_size=4, lr=1e-4):
 
             train_loss += loss.item()
 
+        avg_train_loss = train_loss / len(train_loader)
+
         model.eval()
         acc_total = 0
         with torch.no_grad():
@@ -172,11 +198,26 @@ def run_partE(fruit, epochs=10, batch_size=4, lr=1e-4):
                 out = model(imgs)
                 acc_total += pixel_accuracy(out, masks).item()
 
+        avg_acc = acc_total / len(val_loader)
+        epoch_time = time.time() - start_time
+
         print(
             f"Epoch [{epoch+1}/{epochs}] "
-            f"Loss: {train_loss/len(train_loader):.4f} "
-            f"PixelAcc: {acc_total/len(val_loader):.4f}"
+            f"Loss: {avg_train_loss:.4f} "
+            f"PixelAcc: {avg_acc:.4f}"
         )
+
+        with open(log_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                epoch + 1,
+                round(avg_train_loss, 6),
+                round(avg_acc, 6),
+                round(epoch_time, 2)
+            ])
+    
+   
+   
     torch.save(model.state_dict(), "unet_partE.pth")
     print("Model saved to unet_partE.pth")
 

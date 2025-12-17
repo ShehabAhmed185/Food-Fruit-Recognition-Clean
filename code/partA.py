@@ -30,6 +30,22 @@ class FoodFruitDataset(Dataset):
         label = torch.tensor(self.labels[idx], dtype=torch.float32)
         return img, label
 
+def init_partA_logger():
+    os.makedirs("partA_logs", exist_ok=True)
+    log_path = "partA_logs/training_log.csv"
+
+    if not os.path.exists(log_path):
+        with open(log_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "epoch",
+                "train_loss",
+                "train_accuracy",
+                "val_loss",
+                "val_accuracy",
+                "epoch_time_sec"
+            ])
+    return log_path
 
 
 class PartAModel(nn.Module):
@@ -79,7 +95,6 @@ class PartAModel(nn.Module):
 
 
 
-
 def train_partA(model, train_loader, val_loader, epochs=20, lr=1e-3):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -89,7 +104,12 @@ def train_partA(model, train_loader, val_loader, epochs=20, lr=1e-3):
 
     history = {'loss': [], 'val_loss': [], 'accuracy': [], 'val_accuracy': []}
 
+    log_path = init_partA_logger()
+    best_val_acc = 0.0
+
     for epoch in range(epochs):
+        start_time = time.time()
+
         model.train()
         correct, total, running_loss = 0, 0, 0
 
@@ -128,21 +148,38 @@ def train_partA(model, train_loader, val_loader, epochs=20, lr=1e-3):
 
                 y_true.extend(labels.cpu().numpy())
                 y_pred.extend(preds.cpu().numpy())
+               
+
 
         val_acc = val_correct / val_total
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            torch.save(model.state_dict(), "partA_best_model.pth")
 
+            
         history['loss'].append(running_loss)
         history['val_loss'].append(val_loss)
         history['accuracy'].append(train_acc)
         history['val_accuracy'].append(val_acc)
 
+        epoch_time = time.time() - start_time
+
         print(f"Epoch [{epoch+1}/{epochs}] "
               f"Loss: {running_loss:.4f} Acc: {train_acc:.4f} "
               f"Val_Loss: {val_loss:.4f} Val_Acc: {val_acc:.4f}")
 
+        with open(log_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                epoch + 1,
+                round(running_loss, 6),
+                round(train_acc, 6),
+                round(val_loss, 6),
+                round(val_acc, 6),
+                round(epoch_time, 2)
+            ])
+
     return history, np.array(y_true), np.array(y_pred)
-
-
 
 
 

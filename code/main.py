@@ -156,8 +156,8 @@ if __name__ == "__main__":
     print("\n" + "="*60)
     print("STARTING PART A TRAINING")
     print("="*60)
-    # partA_model, partA_history, partA_test_script = partA.run_partA(food, fruit, use_generator=True, 
-    #                                                                 batch_size=8, epochs=2)    
+    partA_model, partA_history, partA_test_script = partA.run_partA(food, fruit, use_generator=True, 
+                                                                    batch_size=16, epochs=30)    
     #ready for testing
     imgPaths =[os.path.join("Project Data", "Food", "Validation", "ceviche", "217909.jpg"),
                os.path.join("Project Data", "Lichi.jpg"),
@@ -167,7 +167,7 @@ if __name__ == "__main__":
                os.path.join("Project Data", "Fruit","Validation","Banana","Images","76.jpg")
                ]
     # partA_testResult = partA_test_script(imgPaths[0])
-    if(  'FruitX' == 'Fruit' ):
+    if(  'Fruit' == 'Fruit' ):
         # partA_testResult['classification'] 
         #here should do partC
 
@@ -175,34 +175,34 @@ if __name__ == "__main__":
         # print(f"  Confidence: {partA_testResult['confidence']:.3f}")
         # print(f"  Food Probability: {partA_testResult['probability_food']:.3f}")
         # print(f"  Fruit Probability: {partA_testResult['probability_fruit']:.3f}")
-        partC_model, partC_test = partC.run_partC(fruit, epochs=1, batch_size=8)
+        partC_model, partC_test = partC.run_partC(fruit, epochs=30, batch_size=16)
         # Test example
         # for i in range(4):
         img = readTestData(imgPaths[5])
         result = partC_test(img)
         print(result)
 
-        # print("in Masks PartD")
+        print("in Masks PartD")
         
-        # seg_model, partD_test = partD.run_partD(
-        #     fruit,
-        #     epochs=5,
-        #     batch_size=4
-        # )
+        seg_model, partD_test = partD.run_partD(
+            fruit,
+            epochs=30,
+            batch_size=16
+        )
 
         # mask = partD_test(imgPaths[5], "output_mask_partD.png")
 
 
-        # print("in Masks PartE")
+        print("in Masks PartE")
 
 
-        # #run ppartE
-        # modelPartE , testPartE = partE.run_partE(fruit,epochs= 1, batch_size= 2)
-        # gray_mask, color_mask = testPartE(
-        #     imgPaths[5],
-        #     "mask_gray_partE.png",
-        #     "mask_color_partE.png"
-        # )
+        #run ppartE
+        modelPartE , testPartE = partE.run_partE(fruit,epochs= 30, batch_size= 16)
+        gray_mask, color_mask = testPartE(
+            imgPaths[5],
+            "mask_gray_partE.png",
+            "mask_color_partE.png"
+        )
 
     else:
         # #here should do partB

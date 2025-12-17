@@ -182,6 +182,8 @@ def train_partB(food_data, epochs=10, batch_size=16):
     loss_fn = contrastive_loss()
     acc_fn = distance_accuracy()
 
+    best_val_acc = 0.0
+
     for e in range(epochs):
         start_time = time.time()
         model.train()
@@ -217,6 +219,11 @@ def train_partB(food_data, epochs=10, batch_size=16):
         train_acc  = ta / len(train_loader)
         val_loss   = vl / len(val_loader)
         val_acc    = va / len(val_loader)
+
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            torch.save(model.state_dict(), "partB_best_model.pth")
+
 
         print(
             f"Epoch {e+1}/{epochs} | "

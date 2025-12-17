@@ -7,6 +7,9 @@ import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
+import os
+import csv
+import time
 
 # =========================
 # Dataset
@@ -94,6 +97,25 @@ class UNet(nn.Module):
         return self.final(u1)
 
 
+
+def init_partD_logger():
+    os.makedirs("partD_logs", exist_ok=True)
+    log_path = "partD_logs/training_log.csv"
+
+    if not os.path.exists(log_path):
+        with open(log_path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "epoch",
+                "train_loss",
+                "val_dice_score",
+                "epoch_time_sec"
+            ])
+    return log_path
+
+
+
+
 # =========================
 # Dice Score
 # =========================
@@ -119,7 +141,11 @@ def run_partD(fruit, epochs=10, batch_size=4, lr=1e-4):
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
+    log_path = init_partD_logger()
+
     for epoch in range(epochs):
+        start_time = time.time()
+
         model.train()
         train_loss = 0
 
@@ -134,6 +160,8 @@ def run_partD(fruit, epochs=10, batch_size=4, lr=1e-4):
 
             train_loss += loss.item()
 
+        avg_train_loss = train_loss / len(train_loader)
+
         model.eval()
         dice_total = 0
         with torch.no_grad():
@@ -142,7 +170,26 @@ def run_partD(fruit, epochs=10, batch_size=4, lr=1e-4):
                 out = torch.sigmoid(model(imgs))
                 dice_total += dice_score(out, masks).item()
 
-        print(f"Epoch [{epoch+1}/{epochs}] Loss: {train_loss/len(train_loader):.4f} Dice: {dice_total/len(val_loader):.4f}")
+        avg_dice = dice_total / len(val_loader)
+        epoch_time = time.time() - start_time
+
+        print(
+            f"Epoch [{epoch+1}/{epochs}] "
+            f"Loss: {avg_train_loss:.4f} "
+            f"Dice: {avg_dice:.4f}"
+        )
+
+        with open(log_path, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                epoch + 1,
+                round(avg_train_loss, 6),
+                round(avg_dice, 6),
+                round(epoch_time, 2)
+            ])
+
+  
+  
     # Save weights only
     torch.save(model.state_dict(), "unet_partD.pth")
     print("Part D model saved to unet_partD.pth")
