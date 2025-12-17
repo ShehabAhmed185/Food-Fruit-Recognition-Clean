@@ -142,6 +142,7 @@ def run_partD(fruit, epochs=10, batch_size=4, lr=1e-4):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
     log_path = init_partD_logger()
+    best_dice = 0.0
 
     for epoch in range(epochs):
         start_time = time.time()
@@ -187,12 +188,17 @@ def run_partD(fruit, epochs=10, batch_size=4, lr=1e-4):
                 round(avg_dice, 6),
                 round(epoch_time, 2)
             ])
+            if avg_dice > best_dice:
+                best_dice = avg_dice
+                torch.save(model.state_dict(), "unet_partD_best.pth")
+
 
   
   
     # Save weights only
-    torch.save(model.state_dict(), "unet_partD.pth")
-    print("Part D model saved to unet_partD.pth")
+    print(f"Best Dice Score: {best_dice:.4f}")
+    print("Best Part D model saved to unet_partD_best.pth")
+
 
     # =========================
     # Test Script

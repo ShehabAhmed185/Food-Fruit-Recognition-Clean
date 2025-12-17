@@ -330,8 +330,15 @@ def run_partB(food_data, epochs=10, batch_size=16):
     print('='*60)
     print('PART B - Siamese Network Food Recognition')
     print('='*60)
+
     model = train_partB(food_data, epochs, batch_size)
+
+    model.load_state_dict(torch.load("partB_best_model.pth", map_location="cpu"))
+
     build_reference_embeddings(model, food_data, batch_size=4)
+
     save_partB(model)
+
     return model
+
 

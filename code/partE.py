@@ -168,6 +168,8 @@ def run_partE(fruit, epochs=10, batch_size=4, lr=1e-4):
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     log_path = init_partE_logger()
+    best_pixel_acc = 0.0
+
     # =========================
     # Training
     for epoch in range(epochs):
@@ -206,6 +208,10 @@ def run_partE(fruit, epochs=10, batch_size=4, lr=1e-4):
             f"Loss: {avg_train_loss:.4f} "
             f"PixelAcc: {avg_acc:.4f}"
         )
+        if avg_acc > best_pixel_acc:
+            best_pixel_acc = avg_acc
+            torch.save(model.state_dict(), "unet_partE_best.pth")
+
 
         with open(log_path, "a", newline="") as f:
             writer = csv.writer(f)
@@ -217,9 +223,8 @@ def run_partE(fruit, epochs=10, batch_size=4, lr=1e-4):
             ])
     
    
-   
-    torch.save(model.state_dict(), "unet_partE.pth")
-    print("Model saved to unet_partE.pth")
+    print("Best Model Saved")
+    # torch.save(model.state_dict(), "unet_partE.pth")
 
     # =========================
     # Test Script
