@@ -18,18 +18,59 @@ import warnings
 import csv
 import time
 
-
 warnings.filterwarnings("ignore", category=UserWarning)
+
+train_transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.RandomResizedCrop(
+        224, scale=(0.75, 1.0), ratio=(0.9, 1.1)
+    ),
+    transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomRotation(15),
+    transforms.RandomAffine(
+        degrees=0,
+        translate=(0.05, 0.05),
+        scale=(0.95, 1.05)
+    ),
+    transforms.ColorJitter(
+        brightness=0.25,
+        contrast=0.25,
+        saturation=0.25,
+        hue=0.05
+    ),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+])
+
+
+val_transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize((224,224)),
+    transforms.ToTensor(),
+    transforms.Normalize(
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225]
+    )
+])
+
+
 
 # =========================================================
 # Dataset: On-the-fly Siamese pairs (memory safe)
 # =========================================================
 class SiamesePairsDataset(Dataset):
-    def __init__(self, images, labels, negatives_per_sample=1):
+    def __init__(self, images, labels, transform=None, negatives_per_sample=1):
         self.images = images
         self.labels = labels
+        self.transform = transform
         self.negatives_per_sample = negatives_per_sample
-        self.label_to_indices = {l: np.where(labels == l)[0] for l in np.unique(labels)}
+
+        self.label_to_indices = {
+            l: np.where(labels == l)[0] for l in np.unique(labels)
+        }
         self.pairs = self._build_pairs()
 
     def _build_pairs(self):
@@ -37,11 +78,12 @@ class SiamesePairsDataset(Dataset):
         for i, label in enumerate(self.labels):
             pos_candidates = self.label_to_indices[label]
             pos_candidates = pos_candidates[pos_candidates != i]
+
             if len(pos_candidates) > 0:
                 j = np.random.choice(pos_candidates)
                 pairs.append((i, j, 1))
 
-            neg_labels = [l for l in self.label_to_indices.keys() if l != label]
+            neg_labels = [l for l in self.label_to_indices if l != label]
             for _ in range(self.negatives_per_sample):
                 nl = np.random.choice(neg_labels)
                 j = np.random.choice(self.label_to_indices[nl])
@@ -50,13 +92,32 @@ class SiamesePairsDataset(Dataset):
         random.shuffle(pairs)
         return pairs
 
-    def __len__(self):
-        return len(self.pairs)
-
     def __getitem__(self, idx):
         i, j, y = self.pairs[idx]
-        return self.images[i], self.images[j], torch.tensor(y, dtype=torch.float32)
 
+        img1 = self.images[i]
+        img2 = self.images[j]
+
+        # BGR → RGB (FIX)
+        img1 = img1[..., ::-1].copy()
+        img2 = img2[..., ::-1].copy()
+
+
+        # IMPORTANT: same random seed → same transform
+        seed = random.randint(0, 99999)
+        random.seed(seed)
+        torch.manual_seed(seed)
+
+        if self.transform:
+            img1 = self.transform(img1)
+            random.seed(seed)
+            torch.manual_seed(seed)
+            img2 = self.transform(img2)
+
+        return img1, img2, torch.tensor(y, dtype=torch.float32)
+
+    def __len__(self):
+        return len(self.pairs)
 
 # =========================================================
 # Siamese Network
@@ -167,12 +228,18 @@ def train_partB(food_data, epochs=10, batch_size=16):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device:", device)
     log_path = init_partB_logger()
-    X = preprocess(np.array(food_data['train_images']))
+    X = np.array(food_data['train_images'])
     y = np.array(food_data['train_labels'])
 
     split = int(0.8 * len(X))
-    train_ds = SiamesePairsDataset(X[:split], y[:split])
-    val_ds = SiamesePairsDataset(X[split:], y[split:])
+    train_ds = SiamesePairsDataset(
+        X[:split], y[:split], transform=train_transform
+    )
+
+    val_ds = SiamesePairsDataset(
+        X[split:], y[split:], transform=val_transform
+    )
+
 
     train_loader = DataLoader(train_ds, batch_size, shuffle=True)
     val_loader = DataLoader(val_ds, batch_size)
